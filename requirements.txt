@@ -1,1 +1,7 @@
-playwright==1.48.0
+streamlit
+pandas
+numpy
+plotly
+Pillow
+scikit-learn
+umap-learn
