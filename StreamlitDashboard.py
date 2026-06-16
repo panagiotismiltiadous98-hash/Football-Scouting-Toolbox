@@ -34,7 +34,12 @@ ORIGINAL_FILES = {
     "Goalkeepers": "goalkeepers_model_dataset.csv",
 }
 
-PLAYERS_FILE = "outfield_players_dataset.csv"
+NATIONALITY_FILES = {
+    "Attackers": "outfield_players_dataset.csv",
+    "Midfielders": "outfield_players_dataset.csv",
+    "Defenders": "outfield_players_dataset.csv",
+    "Goalkeepers": "goalkeepers_dataset.csv",
+}
 
 FEATURES_BY_ROLE = {
     "Attackers": [
@@ -121,10 +126,10 @@ POSITION_COORDS = {
     "GK":  (0.50, 0.08),
     "CB":  (0.50, 0.25), "RB": (0.80, 0.28), "LB": (0.20, 0.28),
     "RWB": (0.85, 0.40), "LWB": (0.15, 0.40), "SW": (0.50, 0.18),
-    "CDM": (0.50, 0.45), "CM": (0.50, 0.58), "RM": (0.85, 0.58),
-    "LM":  (0.15, 0.58), "CAM": (0.50, 0.70),
-    "RW":  (0.82, 0.80), "LW": (0.18, 0.80), "CF": (0.50, 0.82),
-    "ST":  (0.50, 0.88), "RS": (0.65, 0.86), "LS": (0.35, 0.86),
+    "CDM": (0.50, 0.36), "CM": (0.50, 0.53), "RM": (0.87, 0.52),
+    "LM":  (0.13, 0.52), "CAM": (0.50, 0.71),
+    "RW":  (0.87, 0.86), "LW": (0.13, 0.86), "CF": (0.50, 0.82),
+    "ST":  (0.50, 0.86), "RS": (0.65, 0.86), "LS": (0.35, 0.86),
     "RF":  (0.65, 0.78), "LF": (0.35, 0.78),
 }
 
@@ -139,7 +144,7 @@ NATIONALITY_TO_EMOJI = {
     'Swedish': '🇸🇪', 'Danish': '🇩🇰', 'Swiss': '🇨🇭', 'Austrian': '🇦🇹',
     'Turkish': '🇹🇷', 'Ukrainian': '🇺🇦', 'Ukranian': '🇺🇦', 'Serbian': '🇷🇸',
     'Romanian': '🇷🇴', 'Czech': '🇨🇿', 'Slovak': '🇸🇰', 'Hungarian': '🇭🇺',
-    'Greek': '🇬🇷', 'Scottish': '🏴󠁧󠁢󠁳󠁣󠁴󠁿', 'Welsh': '🏴󠁧󠁢󠁷󠁬󠁳󠁿', 'Irish': '🇮🇪',
+    'Greek': '🇬🇷', 'Scottish': '🏴', 'Welsh': '🏴', 'Irish': '🇮🇪',
     'Algerian': '🇩🇿', 'Tunisian': '🇹🇳', 'Nigerian': '🇳🇬', 'Malian': '🇲🇱',
     'Guinean': '🇬🇳', 'Congolese': '🇨🇩', 'Gabonese': '🇬🇦', 'Zambian': '🇿🇲',
     'Zimbabwean': '🇿🇼', 'Ecuadorian': '🇪🇨', 'Peruvian': '🇵🇪',
@@ -295,8 +300,18 @@ def get_similar_players(df, sim_df, player_idx, top_n, cluster_col, max_value_m=
     if max_value_m is not None and 'value' in result.columns:
         result["_value_m"] = result["value"].apply(parse_value)
         result = result[result["_value_m"] <= max_value_m].drop(columns=["_value_m"])
-    return result.head(top_n).sort_values("similarity_score", ascending=False)
 
+    # Format value column to match player card display (€XX.XM)
+    if 'value' in result.columns:
+        def format_value(v):
+            m = parse_value(v)
+            if m >= 1:
+                return f"€{m:.1f}M"
+            else:
+                return f"€{m*1000:.0f}K"
+        result['value'] = result['value'].apply(format_value)
+
+    return result.head(top_n).sort_values("similarity_score", ascending=False)
 
 def get_young_talents(df, sim_df, player_idx, player_age, role=""):
     scores = sim_df.loc[player_idx].sort_values(ascending=False).drop(player_idx)
@@ -350,19 +365,22 @@ def make_why_this_match_chart(player_row, talent_row, features, role, player_nam
 def make_pitch_figure(positions_str: str) -> go.Figure:
     raw = str(positions_str).replace("/", ",").replace("|", ",")
     positions = [p.strip().upper() for p in raw.split(",") if p.strip()]
-    LINE = dict(color="rgba(255,255,255,0.85)", width=1.8)
-    BG = "#1a6b2a"
+    primary_pos = positions[0] if positions else None
+
+    LINE = dict(color="#222222", width=2)
+
     fig = go.Figure()
+
     fig.add_shape(type="rect", x0=0, y0=0, x1=1, y1=1,
-                  fillcolor=BG, line=dict(color="white", width=2), layer="below")
+                  fillcolor="rgba(0,0,0,0)", line=dict(color="#222222", width=2.5))
     fig.add_shape(type="line", x0=0, y0=0.5, x1=1, y1=0.5, line=LINE)
+
     theta = np.linspace(0, 2*np.pi, 120)
     r = 0.12
-    fig.add_trace(go.Scatter(x=0.5+r*np.cos(theta), y=0.5+r*np.sin(theta)*1.55,
-                             mode="lines", line=dict(color="rgba(255,255,255,0.85)", width=1.8),
-                             showlegend=False, hoverinfo="skip"))
+    fig.add_trace(go.Scatter(x=0.5+r*np.cos(theta), y=0.5+r*np.sin(theta)*0.625,
+                             mode="lines", line=LINE, showlegend=False, hoverinfo="skip"))
     fig.add_trace(go.Scatter(x=[0.5], y=[0.5], mode="markers",
-                             marker=dict(color="white", size=5),
+                             marker=dict(color="#222222", size=5),
                              showlegend=False, hoverinfo="skip"))
     for y0, y1 in [(0, 0.20), (0.80, 1)]:
         fig.add_shape(type="rect", x0=0.18, y0=y0, x1=0.82, y1=y1,
@@ -372,43 +390,60 @@ def make_pitch_figure(positions_str: str) -> go.Figure:
                       line=LINE, fillcolor="rgba(0,0,0,0)")
     for y in [0.0, 1.0]:
         fig.add_shape(type="line", x0=0.38, y0=y, x1=0.62, y1=y,
-                      line=dict(color="white", width=3))
+                      line=dict(color="#222222", width=3.5))
     fig.add_trace(go.Scatter(x=[0.5, 0.5], y=[0.14, 0.86], mode="markers",
-                             marker=dict(color="white", size=4),
+                             marker=dict(color="#222222", size=4),
                              showlegend=False, hoverinfo="skip"))
+
     arc_theta = np.linspace(np.pi*0.15, np.pi*0.85, 40)
     r_arc = 0.10
     fig.add_trace(go.Scatter(x=0.5+r_arc*np.cos(arc_theta),
-                             y=0.20+r_arc*np.sin(arc_theta)*1.55*0.6,
-                             mode="lines", line=dict(color="rgba(255,255,255,0.85)", width=1.8),
-                             showlegend=False, hoverinfo="skip"))
+                             y=0.20+r_arc*np.sin(arc_theta)*0.625*0.6,
+                             mode="lines", line=LINE, showlegend=False, hoverinfo="skip"))
     arc_theta2 = np.linspace(np.pi*1.15, np.pi*1.85, 40)
     fig.add_trace(go.Scatter(x=0.5+r_arc*np.cos(arc_theta2),
-                             y=0.80+r_arc*np.sin(arc_theta2)*1.55*0.6,
-                             mode="lines", line=dict(color="rgba(255,255,255,0.85)", width=1.8),
-                             showlegend=False, hoverinfo="skip"))
+                             y=0.80+r_arc*np.sin(arc_theta2)*0.625*0.6,
+                             mode="lines", line=LINE, showlegend=False, hoverinfo="skip"))
+
     found_any = False
     for pos in positions:
         coords = POSITION_COORDS.get(pos)
         if coords:
             found_any = True
             px_val, py_val = coords
-            fig.add_trace(go.Scatter(x=[px_val], y=[py_val], mode="markers",
-                                     marker=dict(color="rgba(255,220,0,0.25)", size=38, line=dict(width=0)),
-                                     showlegend=False, hoverinfo="skip"))
-            fig.add_trace(go.Scatter(x=[px_val], y=[py_val], mode="markers+text",
-                                     marker=dict(color="#FFD700", size=26, line=dict(color="white", width=2)),
-                                     text=[pos], textposition="middle center",
-                                     textfont=dict(color="#1a1a1a", size=8, family="Arial Black"),
-                                     showlegend=False, hovertext=pos, hoverinfo="text"))
+            is_primary = (pos == primary_pos)
+
+            if is_primary:
+                # Larger glow + gold marker for primary position
+                fig.add_trace(go.Scatter(x=[px_val], y=[py_val], mode="markers",
+                                         marker=dict(color="rgba(255,60,60,0.30)", size=54, line=dict(width=0)),
+                                         showlegend=False, hoverinfo="skip"))
+                fig.add_trace(go.Scatter(x=[px_val], y=[py_val], mode="markers+text",
+                                         marker=dict(color="#FF3B3B", size=34,
+                                                     line=dict(color="#222222", width=2)),
+                                         text=[pos], textposition="middle center",
+                                         textfont=dict(color="white", size=11, family="Arial Black"),
+                                         showlegend=False, hovertext=f"{pos} (Primary)", hoverinfo="text"))
+            else:
+                fig.add_trace(go.Scatter(x=[px_val], y=[py_val], mode="markers",
+                                         marker=dict(color="rgba(255,220,0,0.22)", size=34, line=dict(width=0)),
+                                         showlegend=False, hoverinfo="skip"))
+                fig.add_trace(go.Scatter(x=[px_val], y=[py_val], mode="markers+text",
+                                         marker=dict(color="#FFD700", size=22,
+                                                     line=dict(color="#222222", width=1.5)),
+                                         text=[pos], textposition="middle center",
+                                         textfont=dict(color="#1a1a1a", size=7, family="Arial Black"),
+                                         showlegend=False, hovertext=pos, hoverinfo="text"))
+
     if not found_any:
         fig.add_annotation(x=0.5, y=0.5, text=positions_str,
-                           showarrow=False, font=dict(color="white", size=14))
+                           showarrow=False, font=dict(color="#222222", size=14))
+
     fig.update_layout(
         xaxis=dict(visible=False, range=[-0.02, 1.02], fixedrange=True),
         yaxis=dict(visible=False, range=[-0.02, 1.02], scaleanchor="x", scaleratio=1.6, fixedrange=True),
-        margin=dict(l=0, r=0, t=0, b=0), height=290,
-        plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
+        margin=dict(l=0, r=0, t=0, b=0), height=300,
+        plot_bgcolor="white", paper_bgcolor="white",
     )
     return fig
 
@@ -505,7 +540,7 @@ sim_df, used_features, scaled_array = build_similarity(df, FEATURES_BY_ROLE[role
 cluster_col = CLUSTER_COL_BY_ROLE.get(role, "")
 id_by_index, id_by_name = load_id_lookup(ORIGINAL_FILES[role])
 value_lookup = load_value_lookup(ORIGINAL_FILES[role])  # ← FIXED: use role file, fallback handles GKs
-nat_by_id, nat_by_name = load_nationality_lookup(PLAYERS_FILE)
+nat_by_id, nat_by_name = load_nationality_lookup(NATIONALITY_FILES[role])
 orig_with_clusters = load_original_with_clusters(ORIGINAL_FILES[role], ROLE_FILES[role], cluster_col)
 
 player_options = df["name"].astype(str).tolist()
@@ -526,9 +561,18 @@ if not matches:
 
 if len(matches) > 1:
     chosen_idx = st.sidebar.selectbox(
-        "Duplicate name — choose record", matches,
+        "Duplicate Name — Choose Player", matches,
         format_func=lambda i: f"{df.loc[i,'name']} | {df.loc[i,'club_name']} | {df.loc[i,'positions']}"
     )
+    # Show a small preview image + info right after selection
+    preview_pid = int(df.loc[chosen_idx, 'player_id']) if 'player_id' in df.columns else None
+    preview_img = get_player_image(preview_pid)
+    if preview_img:
+        prev_col1, prev_col2 = st.sidebar.columns([1, 2])
+        with prev_col1:
+            st.image(preview_img, width=60)
+        with prev_col2:
+            st.caption(f"{df.loc[chosen_idx,'club_name']} | Age {int(df.loc[chosen_idx,'age'])}")
 else:
     chosen_idx = matches[0]
 
