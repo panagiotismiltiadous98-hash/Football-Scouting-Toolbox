@@ -14,9 +14,20 @@ import umap.umap_ as umap
 st.set_page_config(page_title="Football Similarity Toolbox", layout="wide")
 
 st.markdown("""
+    <style>
+        @media (max-width: 768px) {
+            .block-container {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
     <h1 style='text-align: center; font-size: 2.8rem; font-weight: 800;
                letter-spacing: 1px; margin-bottom: 1.5rem;'>
-        ⚽ Football Player Similarity Toolbox
+         Football Player Similarity Toolbox
     </h1>
 """, unsafe_allow_html=True)
 
@@ -165,6 +176,18 @@ DISPLAY_COLUMNS = [
     "name", "positions", "club_name", "overall_rating", "potential", "age", "value"
 ]
 
+## fix zoom issues ##
+PLOTLY_CONFIG = {
+    'displayModeBar': True,
+    'displaylogo': False,
+    'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
+}
+
+## REMOVE ZOOM FOR RADAR ##
+RADAR_CONFIG = {
+    'staticPlot': True,
+}
+## images for players ##
 IMAGE_DIR = Path("player_images")
 
 
@@ -466,6 +489,7 @@ def make_pizza_chart(player_row, compare_row, features, labels, player_name, com
                       showlegend=True,
                       title=dict(text=f"{player_name} vs {compare_name}", x=0.5),
                       height=420, margin=dict(t=60, b=20, l=40, r=40))
+
     return fig
 
 
@@ -629,7 +653,7 @@ with col_card:
     st.markdown("<p style='text-align:center; font-weight:600; margin-bottom:0;'>Position on Pitch</p>",
                 unsafe_allow_html=True)
     pitch_fig = make_pitch_figure(str(player_row.get("positions", "")))
-    st.plotly_chart(pitch_fig, use_container_width=True)
+    st.plotly_chart(pitch_fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 with col_table:
     st.subheader("Top similar players")
@@ -679,10 +703,18 @@ with col_table:
         )
 
         talent_names = young_df["name"].tolist()
+        st.markdown(
+            "<p style='font-size:1.1rem; font-weight:700; color:#1a1a2e; margin-bottom:0.3rem;'>"
+            "🔍 Why This Match?</p>"
+            "<p style='font-size:0.9rem; color:#666; margin-top:0;'>"
+            "Select a young talent below to compare their key attributes side-by-side:</p>",
+            unsafe_allow_html=True
+        )
         selected_talent = st.selectbox(
-            "🔍 Why this match? Select a young talent to compare:",
+            "Choose a player",
             talent_names,
-            key="talent_compare"
+            key="talent_compare",
+            label_visibility="collapsed"
         )
 
         talent_matches = df[df["name"] == selected_talent]
@@ -694,15 +726,19 @@ with col_table:
                 role, player_name_str, selected_talent
             )
             if why_fig:
-                st.plotly_chart(why_fig, use_container_width=True)
+                st.plotly_chart(why_fig, use_container_width=True, config=PLOTLY_CONFIG)
 
     else:
         st.markdown(f"""
             <div style='background: #f8f9fa; border-left: 4px solid #ccc;
-                        border-radius: 8px; padding: 0.8rem 1.2rem; margin-top: 0.5rem;'>
-                <p style='color:#888; margin:0; font-size:0.88rem;'>
+                        border-radius: 8px; padding: 1rem 1.2rem; margin-top: 0.5rem;'>
+                <p style='color:#888; margin:0; font-size:1.2rem;'>
                     🌟 No young talents found with ≥ 85% similarity and age ≤ {age_cutoff}.
                 </p>
+                <p style='color:#888; margin:0; font-size:0.88rem;'>
+                No players aged {age_cutoff} or younger matched with ≥ 85% similarity to {player_name_str}.
+                Try increasing the number of similar players, or check a different player!
+            </p>
             </div>
         """, unsafe_allow_html=True)
 
@@ -731,7 +767,7 @@ with col_umap:
                                   text=selected_point["name"], textposition="top center",
                                   showlegend=False))
     fig_umap.update_layout(legend_title_text="", margin=dict(t=50, b=20))
-    st.plotly_chart(fig_umap, use_container_width=True)
+    st.plotly_chart(fig_umap, use_container_width=True, config=PLOTLY_CONFIG)
 
 with col_pizza:
     st.subheader("Attribute Comparison (Radar Chart)")
@@ -744,7 +780,7 @@ with col_pizza:
     compare_name = str(compare_row.get("name", "Similar Player"))
     fig_pizza = make_pizza_chart(player_row, compare_row, available, available_labels,
                                  player_name_str, compare_name)
-    st.plotly_chart(fig_pizza, use_container_width=True)
+    st.plotly_chart(fig_pizza, use_container_width=True, config=RADAR_CONFIG)
 
 st.divider()
 
@@ -762,7 +798,7 @@ with tab_rating:
             player_overall=int(player_row.get('overall_rating', 0)),
             player_row=player_row
         )
-        st.plotly_chart(fig_traj_rating, use_container_width=True)
+        st.plotly_chart(fig_traj_rating, use_container_width=True, config=PLOTLY_CONFIG)
     else:
         st.warning("Rating or cluster data not available for this role.")
 
@@ -771,7 +807,7 @@ with tab_value:
         fig_traj_value = make_trajectory_chart(
             orig_with_clusters, cluster_col, 'value_m',
             'Avg Market Value (€M)', role, player_age)
-        st.plotly_chart(fig_traj_value, use_container_width=True)
+        st.plotly_chart(fig_traj_value, use_container_width=True, config=PLOTLY_CONFIG)
     else:
         st.warning("Value or cluster data not available for this role.")
 
