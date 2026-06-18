@@ -79,7 +79,7 @@ mid_features = [c for c in mid_features if c in df_mid.columns]
 
 # Metadata
 mid_metadata = ['player_id', 'name', 'positions', 'position_universal', 'club_name',
-                'overall_rating', 'potential', 'value', 'age']
+                'overall_rating', 'potential', 'value']
 mid_metadata = [c for c in mid_metadata if c in df_mid.columns]
 
 # Modelling dataframe
@@ -91,7 +91,7 @@ print(mid_features)
 
 ################ EXPLORATORY CHECK ################
 
-mid_numeric = df_mid_model.select_dtypes(include=np.number).drop(columns=['player_id'], errors='ignore')
+mid_numeric = df_mid_model[mid_features].copy()
 
 print("\nAverage midfielder feature values:")
 print(mid_numeric.mean().sort_values(ascending=False))
@@ -161,10 +161,10 @@ print(df_mid_model['mid_cluster'].value_counts().sort_index())
 ################ MIDFIELDER CLUSTER LABELS ################
 
 mid_cluster_names = {
-    0: "Versatile Midfielders",
-    1: "Elite Midfielders",
-    2: "Box-to-Box Midfielders",
-    3: "Creative Playmakers"
+    0: "Box-to-Box Midfielders",
+    1: "Versatile Midfielders",
+    2: "Elite Midfielders",
+    3: "Raw Physical Midfielders"
 }
 
 df_mid_model['mid_cluster_label'] = df_mid_model['mid_cluster'].map(mid_cluster_names)
@@ -174,7 +174,10 @@ print(df_mid_model['mid_cluster_label'].value_counts())
 
 ################ MIDFIELDER CLUSTER PROFILE ################
 
-mid_cluster_summary = df_mid_model.groupby('mid_cluster_label')[mid_numeric.columns].mean()
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+
+mid_cluster_summary = df_mid_model.groupby('mid_cluster_label')[mid_numeric.columns].mean().round(2)
 
 print("\nMidfielder cluster feature averages:")
 print(mid_cluster_summary)

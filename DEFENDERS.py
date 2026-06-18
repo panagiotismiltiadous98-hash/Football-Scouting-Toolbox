@@ -87,7 +87,7 @@ def_features = [c for c in def_features if c in df_def.columns]
 
 # Metadata
 def_metadata = ['player_id', 'name', 'positions', 'position_universal', 'club_name',
-                'overall_rating', 'potential', 'value', 'age']
+                'overall_rating', 'potential', 'value']
 def_metadata = [c for c in def_metadata if c in df_def.columns]
 
 # Modelling dataframe
@@ -99,7 +99,7 @@ print(def_features)
 
 ################ EXPLORATORY CHECK ################
 
-def_numeric = df_def_model.select_dtypes(include=np.number).drop(columns=['player_id'], errors='ignore')
+def_numeric = df_def_model[def_features].copy()
 
 print("\nAverage defender feature values:")
 print(def_numeric.mean().sort_values(ascending=False))
@@ -183,7 +183,10 @@ print(df_def_model['def_cluster_label'].value_counts())
 
 ################ CLUSTER PROFILE ################
 
-cluster_summary = df_def_model.groupby('def_cluster_label')[def_numeric.columns].mean()
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+
+cluster_summary = df_def_model.groupby('def_cluster_label')[def_numeric.columns].mean().round(2)
 
 print("\nDefender cluster feature averages:")
 print(cluster_summary)

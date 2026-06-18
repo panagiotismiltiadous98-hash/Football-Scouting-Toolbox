@@ -184,7 +184,10 @@ print(df['gk_cluster'].value_counts().sort_index())
 
 ################ GK CLUSTER PROFILE ################
 
-cluster_summary = df.groupby('gk_cluster')[gk_numeric.columns].mean()
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
+
+cluster_summary = df.groupby('gk_cluster')[gk_numeric.columns].mean().round(2)
 
 print("\nCluster feature averages:")
 print(cluster_summary)
@@ -272,6 +275,12 @@ for label in df['gk_cluster_label'].unique():
 player_stats = pd.read_csv("player_stats.csv", usecols=['name', 'overall_rating', 'potential', 'value'])
 player_stats = player_stats.drop_duplicates(subset='name')
 df = df.merge(player_stats, on='name', how='left')
+
+context_cols = [c for c in ['overall_rating', 'potential'] if c in df.columns]
+if context_cols:
+    context_summary = df.groupby('gk_cluster_label')[context_cols].mean().round(2)
+    print("\nCluster context (NOT used in clustering, for narrative only):")
+    print(context_summary)
 
 ### SAVE FOR DASHBOARD BACKEND ##
 df.to_csv("goalkeepers_similarity_dataset.csv", index=False)

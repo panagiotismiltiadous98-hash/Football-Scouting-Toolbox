@@ -91,26 +91,26 @@ print("\nAttacker modelling dataframe shape:", df_att_model.shape)
 print("\nAttacker features used:")
 print(att_features)
 
-################ OPTIONAL: ADD ATTACKER CLUSTER LABELS ################
-# Keep this only if you want cluster context in the similarity output
+################ ADD REAL K-MEANS ATTACKER CLUSTER LABELS ################
+# Merges the genuine K-Means archetype labels produced by ATTACKERS.py,
+# matched by player_id. Run ATTACKERS.py first so attackers_cluster_labels.csv
+# exists. This replaces the previous rule-based classify_attacker_cluster()
+# heuristic, which assigned labels by hand-written thresholds instead of by
+# actual cluster-centroid distance.
 
-def classify_attacker_cluster(row):
-    # Simple rule-based reuse of your interpreted clusters
-    # You can remove this whole block if not needed.
-    finishing = row.get('attacking_finishing', np.nan)
-    num_positions = row.get('num_positions', np.nan)
-    age = row.get('age', np.nan)
+att_cluster_labels = pd.read_csv(
+    "attackers_cluster_labels.csv",
+    usecols=['player_id', 'att_cluster', 'att_cluster_label']
+).drop_duplicates(subset='player_id')
 
-    if pd.notna(finishing) and pd.notna(age) and finishing >= 72 and age >= 26:
-        return "Elite Finisher"
-    elif pd.notna(num_positions) and num_positions >= 60:
-        return "Complete Attacker"
-    elif pd.notna(age) and age <= 23:
-        return "Young Prospect"
-    else:
-        return "Role-Specific Attacker"
+df_att_model = df_att_model.merge(att_cluster_labels, on='player_id', how='left')
 
-df_att_model['att_cluster_label'] = df_att_model.apply(classify_attacker_cluster, axis=1)
+missing_labels = df_att_model['att_cluster_label'].isna().sum()
+if missing_labels > 0:
+    print(f"\nWARNING: {missing_labels} attacker(s) have no matching K-Means label. "
+          f"Check that ATTACKERS.py was run on the same dataset version as this script.")
+else:
+    print("\nAll attackers successfully matched to a real K-Means cluster label.")
 
 ################ SCALE FEATURES ################
 

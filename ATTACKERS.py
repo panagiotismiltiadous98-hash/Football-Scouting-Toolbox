@@ -77,7 +77,8 @@ att_features = [
 att_features = [c for c in att_features if c in df_att.columns]
 
 # Metadata
-att_metadata = ['player_id', 'name', 'positions', 'position_universal', 'club_name']
+att_metadata = ['player_id', 'name', 'positions', 'position_universal', 'club_name',
+                'overall_rating', 'potential', 'value']
 att_metadata = [c for c in att_metadata if c in df_att.columns]
 
 # Modelling dataframe
@@ -89,7 +90,7 @@ print(att_features)
 
 ################ EXPLORATORY CHECK ################
 
-att_numeric = df_att_model.select_dtypes(include=np.number).drop(columns=['player_id'], errors='ignore')
+att_numeric = df_att_model[att_features].copy()
 
 print("\nAverage attacker feature values:")
 print(att_numeric.mean().sort_values(ascending=False))
@@ -159,9 +160,9 @@ print(df_att_model['att_cluster'].value_counts().sort_index())
 ################ ATTACKER CLUSTER LABELS ################
 
 cluster_names = {
-    0: "Young Prospect",
+    0: "Versatile Attacker",
     1: "Complete Attacker",
-    2: "Elite Finisher",
+    2: "Young Prospect",
     3: "Role-Specific Attacker"
 }
 
@@ -172,10 +173,19 @@ print(df_att_model['att_cluster_label'].value_counts())
 
 ################ ATTACKER CLUSTER PROFILE ################
 
-cluster_summary = df_att_model.groupby('att_cluster_label')[att_numeric.columns].mean()
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', 1000)
 
-print("\nCluster feature averages:")
+cluster_summary = df_att_model.groupby('att_cluster_label')[att_numeric.columns].mean().round(2)
+
+print("\nCluster feature averages (modelling features only):")
 print(cluster_summary)
+
+context_cols = [c for c in ['overall_rating', 'potential'] if c in df_att_model.columns]
+if context_cols:
+    context_summary = df_att_model.groupby('att_cluster_label')[context_cols].mean().round(2)
+    print("\nCluster context (NOT used in clustering, for narrative only):")
+    print(context_summary)
 
 ################ UMAP VISUALISATION ################
 
@@ -233,3 +243,12 @@ for label in df_att_model['att_cluster_label'].unique():
     print(f"{label}:")
     print(df_att_model.loc[df_att_model['att_cluster_label'] == label, 'name'].head(5).to_list())
     print()
+
+################ SAVE REAL K-MEANS LABELS FOR DOWNSTREAM USE ################
+# SIMILARITY_ENGINE.py merges this in by player_id instead of running its
+# own rule-based classify_attacker_cluster() heuristic.
+
+df_att_model[['player_id', 'att_cluster', 'att_cluster_label']].to_csv(
+    "attackers_cluster_labels.csv", index=False
+)
+print("Saved: attackers_cluster_labels.csv")
