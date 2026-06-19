@@ -182,6 +182,12 @@ mid_cluster_summary = df_mid_model.groupby('mid_cluster_label')[mid_numeric.colu
 print("\nMidfielder cluster feature averages:")
 print(mid_cluster_summary)
 
+mid_context_cols = [c for c in ['overall_rating', 'potential'] if c in df_mid_model.columns]
+if mid_context_cols:
+    mid_context_summary = df_mid_model.groupby('mid_cluster_label')[mid_context_cols].mean().round(2)
+    print("\nCluster context (NOT used in clustering, for narrative only):")
+    print(mid_context_summary)
+
 ################ UMAP VISUALISATION ################
 
 mid_reducer = umap.UMAP(n_components=2, random_state=42)

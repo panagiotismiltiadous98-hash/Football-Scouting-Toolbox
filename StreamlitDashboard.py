@@ -223,10 +223,23 @@ def load_nationality_lookup(players_file: str) -> tuple:
 @st.cache_data
 def load_original_with_clusters(original_file: str, sim_file: str, cluster_col: str) -> pd.DataFrame:
     orig = pd.read_csv(original_file)
+
+    # Goalkeepers' "original" file (goalkeepers_model_dataset.csv) doesn't carry
+    # overall_rating/value the way outfield_model_dataset.csv does — those only
+    # get merged in later, inside the similarity CSV. Pull them from there if missing,
+    # so the trajectory charts work for every role, not just outfield ones.
+    sim_cols_needed = []
     if cluster_col:
-        sim = pd.read_csv(sim_file, usecols=lambda c: c in ['name', cluster_col])
+        sim_cols_needed.append(cluster_col)
+    for col in ['overall_rating', 'value']:
+        if col not in orig.columns:
+            sim_cols_needed.append(col)
+
+    if sim_cols_needed:
+        sim = pd.read_csv(sim_file, usecols=lambda c: c in (['name'] + sim_cols_needed))
         sim = sim.drop_duplicates(subset='name')
         orig = orig.merge(sim, on='name', how='left')
+
     return orig
 
 

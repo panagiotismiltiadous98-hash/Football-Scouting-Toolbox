@@ -191,6 +191,12 @@ cluster_summary = df_def_model.groupby('def_cluster_label')[def_numeric.columns]
 print("\nDefender cluster feature averages:")
 print(cluster_summary)
 
+context_cols = [c for c in ['overall_rating', 'potential'] if c in df_def_model.columns]
+if context_cols:
+    context_summary = df_def_model.groupby('def_cluster_label')[context_cols].mean().round(2)
+    print("\nCluster context (NOT used in clustering, for narrative only):")
+    print(context_summary)
+
 ################ UMAP VISUALISATION ################
 
 reducer = umap.UMAP(n_components=2, random_state=42)
