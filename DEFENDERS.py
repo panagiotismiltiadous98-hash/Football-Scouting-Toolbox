@@ -169,7 +169,7 @@ print(df_def_model['def_cluster'].value_counts().sort_index())
 ################ CLUSTER LABELS ################
 
 def_cluster_names = {
-    0: "Modern All-Round Defender",
+    0: "Balanced Defender",
     1: "Wide Defender Profile",
     2: "Technical Elite Center-Back",
     3: "Experienced Center-Back",
@@ -190,6 +190,48 @@ cluster_summary = df_def_model.groupby('def_cluster_label')[def_numeric.columns]
 
 print("\nDefender cluster feature averages:")
 print(cluster_summary)
+
+################ DIAGNOSTIC: VERIFY DEFINING TRAITS ACROSS ALL CLUSTERS ################
+# Kept in deliberately as a documented verification trail: every archetype name
+# below was checked against its underlying distribution (mean vs. median), not
+# just accepted on the strength of the cluster-average table above. This caught
+# a real issue — Balanced Defender and Wide Defender Profile both initially
+# appeared "versatile" by num_positions mean alone, but median num_positions = 0
+# for both, revealing 67%+ of each cluster are single-position players. The
+# other three clusters' defining stats were verified clean (mean ≈ median).
+
+# 1. Wide Defender Profile — num_positions
+print("\n=== Wide Defender Profile — num_positions distribution ===")
+wide_cluster = df_def_model[df_def_model['def_cluster_label'] == 'Wide Defender Profile']
+print(wide_cluster['num_positions'].describe())
+print(wide_cluster['num_positions'].value_counts().sort_index())
+
+# 2. Technical Elite Center-Back — core defining stat (def_awareness)
+print("\n=== Technical Elite Center-Back — defending_defensive_awareness distribution ===")
+elite_cluster = df_def_model[df_def_model['def_cluster_label'] == 'Technical Elite Center-Back']
+print(elite_cluster['defending_defensive_awareness'].describe())
+
+# 3. Experienced Center-Back — age and sprint (its two defining claims)
+print("\n=== Experienced Center-Back — age distribution ===")
+exp_cluster = df_def_model[df_def_model['def_cluster_label'] == 'Experienced Center-Back']
+print(exp_cluster['age'].describe())
+print("\n=== Experienced Center-Back — movement_sprint_speed distribution ===")
+print(exp_cluster['movement_sprint_speed'].describe())
+
+# 4. Young-Balanced Defender — age and a representative "low across the board" stat
+print("\n=== Young-Balanced Defender — age distribution ===")
+young_cluster = df_def_model[df_def_model['def_cluster_label'] == 'Young-Balanced Defender']
+print(young_cluster['age'].describe())
+print("\n=== Young-Balanced Defender — defending_defensive_awareness distribution ===")
+print(young_cluster['defending_defensive_awareness'].describe())
+
+# 5. Balanced Defender — num_positions (the cluster originally misnamed "Modern All-Round Defender";
+#    renamed after this exact diagnostic showed the "versatility" signal was a mean-skew artifact)
+print("\n=== Balanced Defender — num_positions distribution ===")
+balanced_cluster = df_def_model[df_def_model['def_cluster_label'] == 'Balanced Defender']
+print(balanced_cluster['num_positions'].describe())
+print("\nValue counts:")
+print(balanced_cluster['num_positions'].value_counts().sort_index())
 
 context_cols = [c for c in ['overall_rating', 'potential'] if c in df_def_model.columns]
 if context_cols:
